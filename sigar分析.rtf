@@ -1,0 +1,92 @@
+{\rtf1\ansi\ansicpg936\cocoartf2578
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset134 PingFangSC-Regular;\f2\fnil\fcharset0 Menlo-Regular;
+\f3\fnil\fcharset0 Menlo-Bold;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red47\green180\blue29;\red193\green101\blue28;
+\red180\green36\blue25;\red64\green11\blue217;\red224\green228\blue9;}
+{\*\expandedcolortbl;;\csgray\c0;\cssrgb\c20238\c73898\c14947;\cssrgb\c80553\c47366\c13835;
+\cssrgb\c76409\c21698\c12524;\cssrgb\c32308\c18668\c88227;\cssrgb\c90000\c90000\c0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww28600\viewh14980\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs28 \cf0 sigar
+\f1 \'b7\'d6\'ce\'f6
+\f0 \
+\
+1.
+\f1 \'bb\'f1\'c8\'a1\'bd\'f8\'b3\'cc\'c1\'d0\'b1\'ed\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f2 \cf2 \CocoaLigature0 SIGAR_DECLARE(\cf3 int\cf2 ) sigar_proc_list_get(sigar_t *sigar,\
+                                       sigar_proc_list_t *proclist)\
+\{\
+    \cf4 if\cf2  (proclist == \cf5 NULL\cf2 ) \{\
+        \cf6 /* internal re-use */\cf2 \
+        \cf4 if\cf2  (sigar->pids == \cf5 NULL\cf2 ) \{\
+            sigar->pids = malloc(\cf4 sizeof\cf2 (*sigar->pids));\
+            sigar_proc_list_create(sigar->pids);\
+        \}\
+        \cf4 else\cf2  \{\
+            sigar->pids->number = \cf5 0\cf2 ;\
+        \}\
+        proclist = sigar->pids;\
+    \}\
+    \cf4 else\cf2  \{\
+        sigar_proc_list_create(proclist);\
+    \}\
+\
+    \cf4 return\cf2  \cb7 sigar_os_proc_list_get\cb1 (sigar, proclist);\
+\}
+\f1 \cf0 \CocoaLigature1 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+\cf0 \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f2 \cf2 \CocoaLigature0 #define 
+\f3\b \cf5 PROCP_FS_ROOT
+\f2\b0 \cf2  "/proc/"\
+
+\f1 \cf0 \CocoaLigature1 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f2 \cf3 \CocoaLigature0 int\cf2  \cb7 sigar_os_proc_list_get\cb1 (sigar_t *sigar,\
+                           sigar_proc_list_t *proclist)\
+\{\
+    \cf3 DIR\cf2  *dirp = opendir(PROCP_FS_ROOT);\
+    \cf3 struct\cf2  dirent *ent, dbuf;\
+    \cf3 register\cf2  \cf3 const\cf2  \cf3 int\cf2  threadbadhack = !sigar->has_nptl;\
+    \cf4 if\cf2  (!dirp) \{\
+        \cf4 return\cf2  errno;\
+    \}\
+    \cf4 if\cf2  (threadbadhack && (sigar->proc_signal_offset == -\cf5 1\cf2 )) \{\
+        sigar->proc_signal_offset = get_proc_signal_offset();\
+    \}\
+    \cf4 while\cf2  (readdir_r(dirp, &dbuf, &ent) == \cf5 0\cf2 ) \{\
+        \cf4 if\cf2  (!ent) \{\
+            \cf4 break\cf2 ;\
+        \}\
+        \cf4 if\cf2  (!sigar_isdigit(*ent->d_name)) \{\
+            \cf4 continue\cf2 ;\
+        \}\
+        \cf4 if\cf2  (threadbadhack &&\
+            proc_isthread(sigar, ent->d_name, strlen(ent->d_name)))\
+        \{\
+            \cf4 continue\cf2 ;\
+        \}\
+        \cf6 /* \cf2 \cb7 XXX\cf6 \cb1 : more sanity checking */\cf2 \
+        SIGAR_PROC_LIST_GROW(proclist);\
+        proclist->data[proclist->number++] =\
+            strtoul(ent->d_name, \cf5 NULL\cf2 , \cf5 10\cf2 );\
+    \}\
+    closedir(dirp);\
+    \cf4 return\cf2  SIGAR_OK;\
+\}   \
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f1 \'ca\'b5\'bc\'ca\'c9\'cf\'ca\'c7\'b6\'c1\'c8\'a1
+\f2 /proc/
+\f1 \'cf\'c2\'c3\'e6\'cb\'f9\'d3\'d0\'bd\'f8\'b3\'cc\'a3\'ac\'b2\'a2\'cc\'ed\'bc\'d3\'b5\'bd\'d7\'d4\'bd\'a8\'b5\'c4\'ca\'fd\'be\'dd\'bd\'e1\'b9\'b9\'c0\'ef\'a1\'a3\'bb\'f1\'c8\'a1\'bd\'f8\'b3\'ccpid\'a3\'ac\'bd\'f8\'b3\'cc\'c3\'fb\'a1\'a3\
+\'ca\'b5\'cf\'d6\'b9\'a6\'c4\'dc\'c0\'e0\'cb\'c6ps -e -o pid, cmd\
+}
